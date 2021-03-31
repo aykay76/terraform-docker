@@ -1,0 +1,68 @@
+version: "3.7"
+services:
+  terraform:
+    image: tf.cont
+    depends_on:
+    - "fluentd"
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+      replicas: 1
+      restart_policy:
+        condition: none
+    logging:
+      driver: fluentd
+      options:
+        tag: terraform
+  fluentd:
+    image: fluent/fluentd:edge
+    environment:
+      FLUENTD_CONF: fluentd.conf
+    ports:
+    - target: 24224
+      published: 24224
+      protocol: tcp
+      mode: ingress
+    configs:
+    - source: fluent_config
+      target: /fluentd/etc/fluentd.conf
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 100M
+      restart_policy:
+        condition: none
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+    - target: 9090
+      published: 9090
+      protocol: tcp
+      mode: host
+    configs:
+    - source: prom_config
+      target: /etc/prometheus/prometheus.yml
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+      replicas: 1
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+    - target: 3000
+      published: 3000
+      protocol: tcp
+      mode: host
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+      replicas: 1
+configs:
+  fluent_config:
+    file: ./fluent/fluentd.conf
+  prom_config:
+    file: ./prometheus/prometheus.yml
